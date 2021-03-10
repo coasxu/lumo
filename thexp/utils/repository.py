@@ -8,9 +8,8 @@ from functools import lru_cache
 from typing import List
 from uuid import uuid4
 
-from git import Git, Repo
-from thexp import __VERSION__
-from thexp.utils.paths import renormpath
+from git import Repo
+from thexp.utils.paths import renormpath, repo_root
 from .dates import curent_date
 from ..globals import _GITKEY, _OS_ENV, _FNAME
 
@@ -75,7 +74,7 @@ def _set_default_config(repo: Repo, names: List[str]):
         return {}
 
     def _expsdir(repo):
-        from .paths import global_config
+        from .configio import global_config
         config = global_config()
         expsdir = config.get(_GITKEY.expsdir, renormpath(os.path.join(repo.working_dir, '.thexp/experiments')))
         return expsdir
@@ -182,26 +181,6 @@ def git_config_syntax(value: str) -> str:
     return value.replace('\\\\', '/').replace('\\', '/')
 
 
-@lru_cache()
-def git_root(dir="./", ignore_info=False):
-    """
-    判断某目录是否在git repo 目录内（包括子目录），如果是，返回该 repo 的根目录
-    :param dir:  要判断的目录。默认为程序运行目录
-    :return: 如果是，返回该repo的根目录（包含 .git/ 的目录）
-        否则，返回空
-    """
-    cur = os.getcwd()
-    os.chdir(dir)
-    try:
-        res = Git().execute(['git', 'rev-parse', '--git-dir'])
-    except Exception as e:
-        if not ignore_info:
-            print(e)
-        res = None
-    os.chdir(cur)
-    return res
-
-
 class branch:
     """
     用于配合上下文管理切换 git branch
@@ -233,7 +212,7 @@ def init_repo(dir='./'):
     """
     initialize a directory, including git init, thexp config and a initial commit.
     """
-    path = git_root(dir, ignore_info=True)
+    path = repo_root(dir, ignore_info=True)
     if path is not None:
         res = Repo(path)
     else:
@@ -258,7 +237,7 @@ def load_repo(dir='./') -> Repo:
         git.Repo object or None if dir not have git repository and cancel to init it.
     """
 
-    path = git_root(dir)
+    path = repo_root(dir)
 
     if path is None:
         if _OS_ENV.IGNORE_REPO not in os.environ:

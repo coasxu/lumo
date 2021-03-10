@@ -1,5 +1,4 @@
 from thexp import Trainer
-from thexp.frame import callbacks
 
 from .. import GlobalParams
 
@@ -14,3 +13,6 @@ class BaseCBMixin(Trainer):
         callbacks.LRSchedule().hook(self)  # auto get params.lr_sche to apply lr rate
         if params.ema:
             callbacks.EMAUpdate().hook(self)  # auto update module named with prefix `ema`
+
+        if isinstance(self, callbacks.TrainCallback):
+            self.hook(self)

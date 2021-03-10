@@ -1,12 +1,13 @@
 """
 Methods about files/paths/hash
 """
-from thexp.utils import re
 import hashlib
-import json
 import os
 from functools import lru_cache
 
+from git import Git
+
+from thexp.utils import re
 from ..globals import _GITKEY
 
 
@@ -22,7 +23,7 @@ def listdir_by_time(dir_path):
 
 def _default_config():
     return {
-        _GITKEY.expsdir: os.path.expanduser("~/.thexp/experiments")
+        _GITKEY.expsdir: os.path.expanduser("~/.cache/thexp/experiments")
     }
 
 
@@ -45,31 +46,30 @@ def home_dir():
     return path
 
 
+def local_dir():
+    path = repo_root()
+    if path is not None:
+        path = os.path.join(path, '.thexp')
+        if not os.path.exists(path):
+            os.makedirs(path)
+    return path
+
+
 @lru_cache(1)
 def config_path():
     """global config file path"""
     return os.path.join(home_dir(), "config.json")
 
 
-def write_global_config(dumpsrc: dict):
-    """
-    write global config
-    Notes:
-    ------
-    User should not call this method directly
-    """
-    path = config_path()
-    with open(path, "w") as w:
-        return json.dump(dumpsrc, w, indent=2)
+def global_config_path():
+    return os.path.join(home_dir(), "config.json")
 
 
-def global_config() -> dict:
-    """load global config"""
-    path = config_path()
-    if not os.path.exists(path):
-        write_global_config(_default_config())
-    with open(path, "r") as r:
-        return json.load(r)
+def local_config_path():
+    res = repo_root()
+    if res is None:
+        return None
+    return os.path.join(res, '')
 
 
 def file_atime_hash(file):
@@ -136,3 +136,23 @@ def hash(value) -> str:
 
 def renormpath(path):
     return os.path.normcase(path).replace("\\", '/')
+
+
+@lru_cache()
+def repo_root(dir="./", ignore_info=False):
+    """
+    判断某目录是否在git repo 目录内（包括子目录），如果是，返回该 repo 的根目录
+    :param dir:  要判断的目录。默认为程序运行目录
+    :return: 如果是，返回该repo的根目录（包含 .git/ 的目录）
+        否则，返回空
+    """
+    cur = os.getcwd()
+    os.chdir(dir)
+    try:
+        res = Git().execute(['git', 'rev-parse', '--git-dir'])
+    except Exception as e:
+        if not ignore_info:
+            print(e)
+        res = None
+    os.chdir(cur)
+    return res

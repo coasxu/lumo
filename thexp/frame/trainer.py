@@ -5,22 +5,24 @@ import bisect
 import os
 import pprint as pp
 import warnings
+from collections.abc import Iterator
+from functools import lru_cache
+from functools import wraps
+from typing import Any, Union, Dict
 
 # from ..utils.lazy import torch, np
 import numpy as np
 import torch
-from functools import lru_cache
-from functools import wraps
-from torch.utils.data.dataloader import DataLoader
 from torch.optim.optimizer import Optimizer
-from typing import Any, Union, List, Dict
-from collections.abc import Iterator
+from torch.utils.data.dataloader import DataLoader
+
 from .databundler import DataBundler
+from .experiment import Experiment
 from .meter import AvgMeter, Meter
 from .params import Params
 from .saver import Saver
 from ..base_classes.metaclasses import Merge
-from ..globals import _BUILTIN_PLUGIN, _FNAME, _PLUGIN_DIRNAME, _PLUGIN_KEY, _OS_ENV
+from ..globals import _BUILTIN_PLUGIN, _PLUGIN_KEY, _OS_ENV
 
 
 def mp_agent(rank, self, op):
@@ -119,7 +121,7 @@ class BaseTrainer(metaclass=Merge):
         self._databundler_dict = {}  # type:Dict[str,DataBundler]
         self.train_epoch_toggle = False
         self.train_toggle = False
-        self.experiment = None
+        self.experiment = None  # type: Experiment
         if params is not None:
             self.params = params
             if isinstance(params.device, str):
@@ -189,7 +191,7 @@ class BaseTrainer(metaclass=Merge):
     def initial(self):
         """initial the trainer"""
         import inspect
-        from .experiment import Experiment
+
         # build experiment
         self.params.initial()
         file = inspect.getfile(self.__class__)
@@ -215,10 +217,6 @@ class BaseTrainer(metaclass=Merge):
         self.experiment.add_plugin(_BUILTIN_PLUGIN.trainer, trainer_kwargs)
 
         self.callbacks(self.params)
-        from .callbacks import BaseCallback
-        if isinstance(self, BaseCallback):
-            self.hook(self)
-
         self.models(self.params)
         self.datasets(self.params)
 
@@ -915,5 +913,3 @@ class DistributedTrainer():
         mp.spawn(mp_agent,
                  args=(trainer, self.op),
                  nprocs=trainer.params.world_size)
-
-

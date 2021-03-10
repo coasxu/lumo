@@ -14,6 +14,15 @@ root = globs['dataset']
 ```
 
 you can get all config by use `globs.items()`
+
+
+global local repo
+
+
+local：两个目录，一个放配置，一个放实验记录
+repo：两个目录，一个放配置，一个放实验记录
+
+
 """
 from pprint import pformat
 from typing import Any
