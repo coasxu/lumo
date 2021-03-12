@@ -101,7 +101,7 @@ class _PLUGIN_KEY:
     class TRAINER:
         path = 'path'
         doc = 'doc'
-        fn = 'module'
+        basename = 'basename'
         class_name = 'class_name'
 
     class SAVER:
