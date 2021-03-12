@@ -2,6 +2,7 @@
 
 """
 import bisect
+import inspect
 import os
 import pprint as pp
 import warnings
@@ -26,7 +27,6 @@ from ..globals import _BUILTIN_PLUGIN, _PLUGIN_KEY, _OS_ENV
 
 
 def _gene_class_exp_name(trainer_instance) -> str:
-    import inspect
     try:
         file = inspect.getfile(trainer_instance.__class__)
         pre = os.path.splitext(os.path.basename(file))[0]
@@ -36,21 +36,39 @@ def _gene_class_exp_name(trainer_instance) -> str:
     return "{}.{}".format(pre, trainer_instance.__exp_name__)
 
 
-def mp_agent(rank, self, op):
-    import torch.distributed as dist
-    self.params.local_rank = rank
-    dist.init_process_group(backend='nccl', init_method=self.params.init_method,
-                            rank=rank,
-                            world_size=self.params.world_size)
+def _gene_trainer_info(trainer_instance) -> dict:
+    try:
+        path = inspect.getfile(trainer_instance.__class__)
+        basefn = os.path.splitext(os.path.basename(path))[0]
+    except:
+        path = 'built_in'
+        basefn = 'built_in'
 
-    self.params.device = 'cuda:{}'.format(rank)
-    self.regist_device(torch.device(self.params.device))
-    torch.cuda.set_device(self.params.local_rank)
+    trainer_kwargs = {
+        _PLUGIN_KEY.TRAINER.path: path,
+        _PLUGIN_KEY.TRAINER.doc: trainer_instance.__class__.__doc__,
+        _PLUGIN_KEY.TRAINER.basename: basefn,
+        _PLUGIN_KEY.TRAINER.class_name: trainer_instance.__class__.__name__
+    }
+
+    return trainer_kwargs
+
+
+def mp_agent(rank, trainer, op):
+    import torch.distributed as dist
+    trainer.params.local_rank = rank
+    dist.init_process_group(backend='nccl', init_method=trainer.params.init_method,
+                            rank=rank,
+                            world_size=trainer.params.world_size)
+
+    trainer.params.device = 'cuda:{}'.format(rank)
+    trainer.regist_device(torch.device(trainer.params.device))
+    torch.cuda.set_device(trainer.params.local_rank)
     print('in rank {}'.format(rank))
-    self.models(self.params)
-    self.datasets(self.params)
-    self.callbacks(self.params)
-    op(self)
+    trainer.models(trainer.params)
+    trainer.datasets(trainer.params)
+    trainer.callbacks(trainer.params)
+    op(trainer)
 
 
 class BaseTrainer(metaclass=Merge):
@@ -201,7 +219,6 @@ class BaseTrainer(metaclass=Merge):
 
     def initial(self):
         """initial the trainer"""
-        import inspect
 
         # build experiment
         self.params.initial()
@@ -215,12 +232,7 @@ class BaseTrainer(metaclass=Merge):
         self.experiment.add_params(self.params)
 
         # regist trainer info
-        trainer_kwargs = {
-            _PLUGIN_KEY.TRAINER.path: inspect.getfile(self.__class__),
-            _PLUGIN_KEY.TRAINER.doc: self.__class__.__doc__,
-            _PLUGIN_KEY.TRAINER.fn: pre,
-            _PLUGIN_KEY.TRAINER.class_name: self.__class__.__name__
-        }
+        trainer_kwargs = _gene_trainer_info(self)
         self.experiment.add_plugin(_BUILTIN_PLUGIN.trainer, trainer_kwargs)
 
         self.callbacks(self.params)
@@ -886,7 +898,6 @@ class DistributedTrainer():
         else:
             trainer.params = Params()
 
-        import inspect
         from .experiment import Experiment
         # build experiment
         trainer.params.initial()
@@ -901,12 +912,7 @@ class DistributedTrainer():
         trainer.experiment.add_params(params)
 
         # regist trainer info
-        trainer_kwargs = {
-            _PLUGIN_KEY.TRAINER.path: inspect.getfile(trainer.__class__),
-            _PLUGIN_KEY.TRAINER.doc: trainer.__class__.__doc__,
-            _PLUGIN_KEY.TRAINER.fn: pre,
-            _PLUGIN_KEY.TRAINER.class_name: trainer.__class__.__name__
-        }
+        trainer_kwargs = _gene_trainer_info(trainer)
         trainer.experiment.add_plugin(_BUILTIN_PLUGIN.trainer, trainer_kwargs)
 
         params.distributed = True
