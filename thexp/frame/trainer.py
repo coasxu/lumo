@@ -883,15 +883,16 @@ class DistributedTrainer():
         from .experiment import Experiment
         # build experiment
         trainer.params.initial()
-        file = inspect.getfile(trainer.__class__)
-        dirname = os.path.basename(os.path.dirname(file))
-
-        pre = os.path.splitext(os.path.basename(file))[0]
+        try:
+            file = inspect.getfile(trainer.__class__)
+            pre = os.path.splitext(os.path.basename(file))[0]
+        except:
+            pre = 'built_in'
 
         if not trainer.params.get('git_commit', True):
             os.environ[_OS_ENV.THEXP_COMMIT_DISABLE] = '1'
 
-        trainer.experiment = Experiment("{}.{}".format(pre, dirname))
+        trainer.experiment = Experiment("{}.{}".format(pre, trainer.__exp_name__))
 
         # rigist and save params of this training procedure
         trainer.experiment.add_params(params)
