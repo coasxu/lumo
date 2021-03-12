@@ -5,9 +5,9 @@ from importlib import util
 import importlib
 import inspect
 
-from thexp import analyse, base_classes, calculate, contrib, decorators, frame, nest, utils
+from thexp import base_classes, calculate, contrib, decorators, frame, nest, utils
 
-modules = [analyse, base_classes, calculate, contrib, decorators, frame, nest, utils]
+modules = [base_classes, calculate, contrib, decorators, frame, nest, utils]
 
 cwd = os.getcwd()
 
