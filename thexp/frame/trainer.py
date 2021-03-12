@@ -25,6 +25,17 @@ from ..base_classes.metaclasses import Merge
 from ..globals import _BUILTIN_PLUGIN, _PLUGIN_KEY, _OS_ENV
 
 
+def _gene_class_exp_name(trainer_instance) -> str:
+    import inspect
+    try:
+        file = inspect.getfile(trainer_instance.__class__)
+        pre = os.path.splitext(os.path.basename(file))[0]
+    except:
+        pre = 'built_in'
+
+    return "{}.{}".format(pre, trainer_instance.__exp_name__)
+
+
 def mp_agent(rank, self, op):
     import torch.distributed as dist
     self.params.local_rank = rank
@@ -194,15 +205,11 @@ class BaseTrainer(metaclass=Merge):
 
         # build experiment
         self.params.initial()
-        file = inspect.getfile(self.__class__)
-        dirname = os.path.basename(os.path.dirname(file))
-
-        pre = os.path.splitext(os.path.basename(file))[0]
-
         if not self.params.get('git_commit', True):
             os.environ[_OS_ENV.THEXP_COMMIT_DISABLE] = '1'
 
-        self.experiment = Experiment("{}.{}".format(pre, dirname))
+        exp_name = _gene_class_exp_name(self)
+        self.experiment = Experiment(exp_name)
 
         # rigist and save params of this training procedure
         self.experiment.add_params(self.params)
@@ -883,16 +890,12 @@ class DistributedTrainer():
         from .experiment import Experiment
         # build experiment
         trainer.params.initial()
-        try:
-            file = inspect.getfile(trainer.__class__)
-            pre = os.path.splitext(os.path.basename(file))[0]
-        except:
-            pre = 'built_in'
 
         if not trainer.params.get('git_commit', True):
             os.environ[_OS_ENV.THEXP_COMMIT_DISABLE] = '1'
 
-        trainer.experiment = Experiment("{}.{}".format(pre, trainer.__exp_name__))
+        exp_name = _gene_class_exp_name(trainer)
+        trainer.experiment = Experiment(exp_name)
 
         # rigist and save params of this training procedure
         trainer.experiment.add_params(params)
