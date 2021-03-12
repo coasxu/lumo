@@ -98,38 +98,6 @@ for j in range(500):
     print(am)
 ```
 
-### Analyse your experiments
-
-Search experiments, compare it and plot curve or parallel. You can see [Experiment](https://sailist.github.io/thexp/exp) for details.
-
-```python
-from thexp import Q, C
-
-testq = (
-    Q.repos() # Query all repositories globaly.
-        .exps()['sup'] # Query all experiments from all repositories, then search experiments by name 'sup'
-        .tests() # Query all tests from experiment 'sup'
-)
-bd = (
-    testq.success()  # Filter tests that end without any exception.(i.e. success)
-        .boards()  # Query all board(tensorboard item) from success tests.
-)
-
-print(bd.scalar_tags) # View scalar tags
-
-# Draw parallel of the tests with meter `top1_test_`, `lr`, `epoch`
-bd.parallel(C.meter.top1_test_,
-            C.param["optim.args.lr"],  # learning rate
-            C.param.epoch)
-```
-> <img src="/img/query_parallel.png" alt="parallel">
-
-and 
-
-```python
-bd.boards().line('top1_test_')
-```
-> <img src="/img/query_line.png" alt="line">
 
 ## Contribute
 
