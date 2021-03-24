@@ -2,15 +2,16 @@
 
 """
 
-import os, sys
+import os
+import sys
 from functools import wraps
 
-from ..calculate.schedule import Schedule, ScheduleList
 from .meter import AvgMeter
 from .meter import Meter
 from .params import Params
 from .trainer import BaseTrainer
 from ..base_classes.trickitems import NoneItem, AvgItem
+from ..calculate.schedule import Schedule, ScheduleList
 from ..globals import _ML
 from ..utils.timing import format_second
 
@@ -235,6 +236,7 @@ class LoggerCallback(TrainCallback):
         trainer.logger.raw(params)
         self.start = 0
         self.cur = None
+        self._meter = None
 
     def on_train_begin(self, trainer: BaseTrainer, func, params: Params, *args, **kwargs):
         from ..utils.timing import TimeIt
@@ -252,11 +254,18 @@ class LoggerCallback(TrainCallback):
         trainer.logger.info("train end", meter)
         trainer.logger.info("train time: {}".format(format_second(self.traintime["use"])))
 
+    @property
+    def meter(self):
+        if self._meter is None:
+            if self.avg:
+                meter = AvgMeter()
+            else:
+                meter = Meter()
+            self._meter = meter
+        return self._meter
+
     def on_train_epoch_begin(self, trainer: BaseTrainer, func, params: Params, *args, **kwargs):
         from ..utils.timing import TimeIt
-
-        if self.avg:
-            self.meter = AvgMeter()
         self.epochtime = TimeIt()
         self.epochtime.start()
         trainer.logger.info("{}/{}".format(params.eidx, params.epoch))
@@ -284,9 +293,8 @@ class LoggerCallback(TrainCallback):
         if meter is None:
             meter = ""
         else:
-            if self.avg:
-                self.meter.update(meter)
-                meter = self.meter
+            self.meter.update(meter)
+            meter = self.meter
         trainer.logger.inline("{}/{}".format(params.idx + 1, len(trainer.train_dataloader)), meter, fix=1)
 
     def on_first_exception(self, trainer: BaseTrainer, func, params: Params, e: BaseException, *args, **kwargs):

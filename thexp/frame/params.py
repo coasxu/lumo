@@ -6,9 +6,9 @@ import json
 import os
 import pprint as pp
 import warnings
-from collections import defaultdict
 from collections.abc import Iterable
 from datetime import timedelta
+from itertools import chain
 from typing import Any, overload
 
 import fire
@@ -18,9 +18,9 @@ from ..base_classes.attr import attr
 from ..base_classes.defaults import default
 from ..base_classes.errors import BoundCheckError, NewParamWarning
 from ..base_classes.params_vars import ParamsFactory, OptimParams, OptimMixin
-from ..utils.environ import ENVIRON_
 from ..calculate import schedule
 from ..decorators.deprecated import deprecated
+from ..utils.environ import ENVIRON_
 
 
 class BaseParams(OptimMixin):
@@ -111,7 +111,11 @@ class BaseParams(OptimMixin):
         return self._param_dict.__getattr__(item)
 
     def __repr__(self):
-        return "{}".format(self.__class__.__name__) + pp.pformat([(k, v) for k, v in self._param_dict.items()])
+        dynamic_propertys = [(k, getattr(self, k)) for k in self.__dir__() if
+                             isinstance(getattr(self.__class__, k, None), property)]
+
+        return "{}".format(self.__class__.__name__) + pp.pformat(
+            [(k, v) for k, v in chain(self._param_dict.items())] + [{'propertys': dynamic_propertys}])
 
     __str__ = __repr__
 
@@ -214,7 +218,7 @@ class BaseParams(OptimMixin):
             yield res
 
     def _copy(self):
-        res = BaseParams()
+        res = self.__class__()
         res._param_dict = copy.copy(self._param_dict)
         res._repeat = copy.copy(self._repeat)
         # res._bound = copy.copy(self._bound)
@@ -330,7 +334,6 @@ class BaseParams(OptimMixin):
         """
         self._lock = True
 
-    @property
     def inner_dict(self) -> attr:
         return self._param_dict
 
