@@ -257,11 +257,7 @@ class LoggerCallback(TrainCallback):
     @property
     def meter(self):
         if self._meter is None:
-            if self.avg:
-                meter = AvgMeter()
-            else:
-                meter = Meter()
-            self._meter = meter
+            self.reset_meter()
         return self._meter
 
     def on_train_epoch_begin(self, trainer: BaseTrainer, func, params: Params, *args, **kwargs):
@@ -287,7 +283,16 @@ class LoggerCallback(TrainCallback):
         tm.last = format_second(last)
         trainer.logger.info(tm)
 
+        self.reset_meter()
         super().on_train_epoch_end(trainer, func, params, meter, *args, **kwargs)
+
+    def reset_meter(self):
+        if self.avg:
+            meter = AvgMeter()
+        else:
+            meter = Meter()
+        self._meter = meter
+
 
     def on_train_batch_end(self, trainer: BaseTrainer, func, params: Params, meter: Meter, *args, **kwargs):
         if meter is None:
