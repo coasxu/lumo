@@ -292,7 +292,7 @@ class BaseParams(OptimMixin):
 
         """
         with open(fn, 'w', encoding='utf-8') as w:
-            json.dump(self.inner_dict.jsonify(), w, indent=2)
+            json.dump(self.inner_dict().jsonify(), w, indent=2)
 
     def items(self):
         return self._param_dict.items()

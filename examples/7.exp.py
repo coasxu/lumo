@@ -18,7 +18,7 @@ from thexp import Params
 params = Params()
 exp.add_plugin("params", dict(
     _param_hash = params.hash(),
-    data = params.inner_dict.jsonify()
+    data = params.inner_dict().jsonify()
 ))
 
 from thexp import Logger
