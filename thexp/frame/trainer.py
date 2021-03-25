@@ -786,6 +786,11 @@ class BaseTrainer(metaclass=Merge):
         for k, v in self._vector_dict.items():
             if isinstance(v, torch.Tensor):
                 self.__setattr__(k, v.to(device))
+        for k, v in self._optim_dict.items():
+            for state in v.state.values():
+                for k, v in state.items():
+                    if torch.is_tensor(v):
+                        state[k] = v.to(device)
 
     '''magic functions'''
 
